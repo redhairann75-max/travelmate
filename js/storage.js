@@ -32,18 +32,17 @@ const Storage = {
       localStorage.removeItem('travel_expenses');
       return trips;
     }
-    // 초기 기본값
-    const defaultTrips = [{
-      id: 'tokyo',
-      name: '도쿄 여행 2026',
-      startDate: '2026-03-21',
-      endDate: '2026-03-25',
-      currency: 'JPY',
-      currencySymbol: '¥',
-      exchangeRate: 9.2
-    }];
+    // 초기 기본값 (DefaultData에서 로드)
+    const defaultTrips = DefaultData.trips;
     this.saveTrips(defaultTrips);
     localStorage.setItem(this.KEYS.CURRENT, 'tokyo');
+    // 기본 장소/경비 데이터도 저장
+    defaultTrips.forEach(t => {
+      const places = DefaultData['places_' + t.id];
+      const expenses = DefaultData['expenses_' + t.id];
+      if (places) localStorage.setItem('travel_places_' + t.id, JSON.stringify(places));
+      if (expenses) localStorage.setItem('travel_expenses_' + t.id, JSON.stringify(expenses));
+    });
     return defaultTrips;
   },
 

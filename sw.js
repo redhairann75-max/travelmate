@@ -1,10 +1,11 @@
 // sw.js - Service Worker (오프라인 지원)
 
-const CACHE_NAME = 'travelmate-v1';
+const CACHE_NAME = 'travelmate-v2';
 const ASSETS = [
   './',
   './index.html',
   './css/style.css',
+  './js/default-data.js',
   './js/storage.js',
   './js/app.js',
   './js/itinerary.js',
