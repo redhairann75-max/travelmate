@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4A90D9">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>TravelMate - 여행 올인원</title>
+  <link rel="manifest" href="manifest.json">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- App CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 헤더 -->
+  <header class="app-header">
+    <h1 class="app-title">TravelMate</h1>
+    <button class="btn-settings" onclick="App.openSettings()" aria-label="설정">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+      </svg>
+    </button>
+  </header>
+  <!-- 트립 셀렉터 -->
+  <div class="trip-selector" id="trip-selector"></div>
+
+  <!-- 메인 콘텐츠 -->
+  <main class="app-content">
+    <!-- 일정 탭 -->
+    <section id="tab-itinerary" class="tab-panel active">
+      <div class="tab-header">
+        <h2>일정</h2>
+        <button class="btn-add" onclick="Itinerary.openAddForm()">+ 장소 추가</button>
+      </div>
+      <div class="date-selector" id="itinerary-dates"></div>
+      <div class="place-list" id="place-list"></div>
+    </section>
+
+    <!-- 경비 탭 -->
+    <section id="tab-expenses" class="tab-panel">
+      <div class="tab-header">
+        <h2>경비</h2>
+        <button class="btn-add" onclick="Expenses.openAddForm()">+ 지출 추가</button>
+      </div>
+      <div class="expense-summary-bar" id="expense-summary-bar"></div>
+      <div class="date-selector" id="expense-dates"></div>
+      <div class="expense-list" id="expense-list"></div>
+    </section>
+
+    <!-- 지도 탭 -->
+    <section id="tab-map" class="tab-panel">
+      <div class="map-controls">
+        <select id="map-date-filter" onchange="TravelMap.filterByDate(this.value)">
+          <option value="all">전체 날짜</option>
+        </select>
+      </div>
+      <div id="map-container"></div>
+    </section>
+
+    <!-- 요약 탭 -->
+    <section id="tab-summary" class="tab-panel">
+      <div class="tab-header">
+        <h2>요약</h2>
+      </div>
+      <div id="summary-content"></div>
+    </section>
+  </main>
+
+  <!-- 하단 탭 바 -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="itinerary" onclick="App.switchTab('itinerary')">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>일정</span>
+    </button>
+    <button class="tab-btn" data-tab="expenses" onclick="App.switchTab('expenses')">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>경비</span>
+    </button>
+    <button class="tab-btn" data-tab="map" onclick="App.switchTab('map')">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <span>지도</span>
+    </button>
+    <button class="tab-btn" data-tab="summary" onclick="App.switchTab('summary')">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>요약</span>
+    </button>
+  </nav>
+
+  <!-- 모달 오버레이 -->
+  <div class="modal-overlay" id="modal-overlay" onclick="App.closeModal()"></div>
+
+  <!-- 장소 추가/수정 모달 -->
+  <div class="modal" id="place-modal">
+    <div class="modal-header">
+      <h3 id="place-modal-title">장소 추가</h3>
+      <button class="btn-close" onclick="App.closeModal()">&times;</button>
+    </div>
+    <form id="place-form" onsubmit="Itinerary.savePlace(event)">
+      <input type="hidden" id="place-id">
+      <div class="form-group">
+        <label for="place-date">날짜</label>
+        <select id="place-date" required></select>
+      </div>
+      <div class="form-group">
+        <label for="place-name">장소명</label>
+        <input type="text" id="place-name" placeholder="예: 아사쿠사 센소지" required>
+      </div>
+      <div class="form-group">
+        <label for="place-time">시간</label>
+        <input type="time" id="place-time">
+      </div>
+      <div class="form-group">
+        <label for="place-category">카테고리</label>
+        <select id="place-category">
+          <option value="sightseeing">관광</option>
+          <option value="food">식사</option>
+          <option value="shopping">쇼핑</option>
+          <option value="cafe">카페</option>
+          <option value="accommodation">숙소</option>
+          <option value="transport">이동</option>
+          <option value="event">행사</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="place-memo">메모</label>
+        <textarea id="place-memo" rows="2" placeholder="메모 (선택사항)"></textarea>
+      </div>
+      <div class="form-group">
+        <label>위치 (지도에서 선택하거나 직접 입력)</label>
+        <div class="location-input">
+          <input type="number" id="place-lat" step="any" placeholder="위도 (예: 35.7148)">
+          <input type="number" id="place-lng" step="any" placeholder="경도 (예: 139.7967)">
+        </div>
+        <button type="button" class="btn-secondary" onclick="Itinerary.searchLocation()">장소 검색</button>
+      </div>
+      <button type="submit" class="btn-primary">저장</button>
+    </form>
+  </div>
+
+  <!-- 경비 추가/수정 모달 -->
+  <div class="modal" id="expense-modal">
+    <div class="modal-header">
+      <h3 id="expense-modal-title">지출 추가</h3>
+      <button class="btn-close" onclick="App.closeModal()">&times;</button>
+    </div>
+    <form id="expense-form" onsubmit="Expenses.saveExpense(event)">
+      <input type="hidden" id="expense-id">
+      <div class="form-group">
+        <label for="expense-date">날짜</label>
+        <select id="expense-date" required></select>
+      </div>
+      <div class="form-group">
+        <label for="expense-amount">금액</label>
+        <input type="number" id="expense-amount" placeholder="예: 1500" required min="0">
+      </div>
+      <div class="form-group">
+        <label for="expense-category">카테고리</label>
+        <select id="expense-category">
+          <option value="food">식비</option>
+          <option value="transport">교통</option>
+          <option value="accommodation">숙박</option>
+          <option value="sightseeing">관광</option>
+          <option value="shopping">쇼핑</option>
+          <option value="cafe">카페</option>
+          <option value="event">행사</option>
+          <option value="other">기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="expense-description">내용</label>
+        <input type="text" id="expense-description" placeholder="예: 이치란 라멘">
+      </div>
+      <div class="form-group">
+        <label for="expense-place">연결 장소 (선택)</label>
+        <select id="expense-place">
+          <option value="">없음</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-primary">저장</button>
+    </form>
+  </div>
+
+  <!-- 설정 모달 -->
+  <div class="modal" id="settings-modal">
+    <div class="modal-header">
+      <h3>여행 설정</h3>
+      <button class="btn-close" onclick="App.closeModal()">&times;</button>
+    </div>
+    <form id="settings-form" onsubmit="App.saveSettings(event)">
+      <div class="form-group">
+        <label for="trip-name">여행 이름</label>
+        <input type="text" id="trip-name" required>
+      </div>
+      <div class="form-group">
+        <label for="trip-start">시작일</label>
+        <input type="date" id="trip-start" required>
+      </div>
+      <div class="form-group">
+        <label for="trip-end">종료일</label>
+        <input type="date" id="trip-end" required>
+      </div>
+      <div class="form-group">
+        <label for="trip-currency">통화</label>
+        <select id="trip-currency">
+          <option value="JPY">JPY (¥) - 일본 엔</option>
+          <option value="HKD">HKD (HK$) - 홍콩 달러</option>
+          <option value="USD">USD ($) - 미국 달러</option>
+          <option value="EUR">EUR (€) - 유로</option>
+          <option value="CNY">CNY (¥) - 중국 위안</option>
+          <option value="THB">THB (฿) - 태국 바트</option>
+          <option value="TWD">TWD (NT$) - 대만 달러</option>
+          <option value="VND">VND (₫) - 베트남 동</option>
+          <option value="SGD">SGD (S$) - 싱가포르 달러</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="trip-rate">환율 (1 통화 = ? KRW)</label>
+        <input type="number" id="trip-rate" step="0.1" min="0" required>
+      </div>
+      <button type="submit" class="btn-primary">저장</button>
+      <hr>
+      <div class="settings-actions">
+        <button type="button" class="btn-secondary" onclick="App.exportData()">데이터 내보내기</button>
+        <button type="button" class="btn-secondary" onclick="App.importData()">데이터 가져오기</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- App JS -->
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/itinerary.js"></script>
+  <script src="js/expenses.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/summary.js"></script>
+  <script>
+    // PWA Service Worker 등록
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
