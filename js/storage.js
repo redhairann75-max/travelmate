@@ -13,7 +13,20 @@ const Storage = {
   // --- 멀티트립 관리 ---
   getTrips() {
     const data = localStorage.getItem(this.KEYS.TRIPS);
-    if (data) return JSON.parse(data);
+    if (data) {
+      let trips = JSON.parse(data);
+      // 홍콩 트립이 없으면 추가 (마이그레이션)
+      if (!trips.find(t => t.id === 'hongkong')) {
+        const hkTrip = DefaultData.trips.find(t => t.id === 'hongkong');
+        if (hkTrip) {
+          trips.push(hkTrip);
+          this.saveTrips(trips);
+          localStorage.setItem('travel_places_hongkong', JSON.stringify(DefaultData.places_hongkong));
+          localStorage.setItem('travel_expenses_hongkong', JSON.stringify(DefaultData.expenses_hongkong));
+        }
+      }
+      return trips;
+    }
     // 마이그레이션: 기존 단일 트립 데이터가 있으면 변환
     const oldTrip = localStorage.getItem('travel_trip');
     if (oldTrip) {
